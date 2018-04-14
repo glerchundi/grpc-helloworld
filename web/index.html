@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Helloworld Example</title>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="js/helloworld.js"></script>
+    <script type="text/javascript">
+        const INTERVAL = 500; // ms
+        const MAX_STREAM_MESSAGES = 50;
+        var helloService;
+
+        var addMessage = function(message, cssClass) {
+            $("#first").after(
+                $("<div/>").addClass("row").append(
+                    $("<h2/>").append(
+                        $("<span/>").addClass("label " + cssClass).text(message))));
+        };
+
+        var addLeftMessage = function(message) {
+            addMessage(message, "label-primary pull-left");
+        };
+
+        var addRightMessage = function(message) {
+            addMessage(message, "label-default pull-right");
+        };
+
+        var sayHello = function(name) {
+            addLeftMessage(name);
+            var unaryRequest = new proto.helloworld.HelloRequest();
+            unaryRequest.setName(name);
+            helloService.sayHello(unaryRequest, {
+                    "custom-header-1": "value1"
+                },
+                function(err, response) {
+                    if (err) {
+                        addRightMessage('Error code: ' + err.code + ' "' + err.message + '"');
+                    } else {
+                        setTimeout(function() {
+                            addRightMessage(response.getMessage());
+                        }, INTERVAL);
+                    }
+                }
+            );
+        };
+
+        var sayRepetitiveHello = function(name, count) {
+            addLeftMessage(name);
+            if (count > MAX_STREAM_MESSAGES)
+                count = MAX_STREAM_MESSAGES;
+            var streamRequest = new proto.helloworld.HelloRequest();
+            streamRequest.setName(name);
+
+            var stream = helloService.sayRepetitiveHello(streamRequest, {
+                "custom-header-1": "value1"
+            });
+            stream.on('data', function(response) {
+                addRightMessage(response.getMessage());
+            });
+            stream.on('status', function(status) {
+                if (status.code != grpc.web.StatusCode.OK) {
+                    addRightMessage('Error code: ' + status.code + ' "' + status.details + '"');
+                }
+                if (status.metadata) {
+                    console.log("Received metadata");
+                    console.log(status.metadata);
+                }
+            });
+            stream.on('end', function() {
+                console.log("stream end signal received");
+            });
+        };
+
+        var send = function(e) {
+            var name = $("#name").val().trim();
+            $("#name").val(''); // clear the text box
+            if (!name) return false;
+
+            if (name.indexOf(' ') > 0) {
+                var count = name.substr(0, name.indexOf(' '));
+                if (/^\d+$/.test(count)) {
+                    sayRepetitiveHello(name.substr(name.indexOf(' ') + 1));
+                } else {
+                    sayHello(name);
+                }
+            } else {
+                sayHello(name);
+            }
+
+            return false;
+        };
+
+        $(document).ready(function() {
+            // create client
+            var url = location.protocol + '//' + location.hostname + (location.port ? ':' + location.port : '');
+            helloService = new proto.helloworld.GreeterClient(url);
+
+            // event handlers
+            $("#send").click(send);
+            $("#name").keyup(function(e) {
+                if (e.keyCode == 13) send(); // enter key
+                return false;
+            });
+
+            $("#name").focus();
+        });
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row" id="first">
+            <div class="form-group">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="name">
+                    <span class="input-group-btn">
+                        <button class="btn btn-primary" type="button" id="send">Send</button>
+                    </span>
+                </div>
+                <p class="help-block">Example: "Hello", "4 Hello"</p>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
