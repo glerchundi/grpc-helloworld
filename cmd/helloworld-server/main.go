@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
 	"log"
@@ -10,6 +12,7 @@ import (
 	"time"
 
 	"github.com/glerchundi/grpc-helloworld/internal/helloworld"
+	mytls "github.com/glerchundi/grpc-helloworld/internal/tls"
 	"github.com/glerchundi/grpc-helloworld/internal/web"
 	"github.com/soheilhy/cmux"
 	"google.golang.org/grpc"
@@ -17,10 +20,8 @@ import (
 )
 
 var (
-	tls      = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
-	certFile = flag.String("cert_file", "", "The TLS cert file")
-	keyFile  = flag.String("key_file", "", "The TLS key file")
-	port     = flag.Int("port", 10000, "The server port")
+	wantsTLS = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
+	port     = flag.Int("port", 8443, "The server port")
 )
 
 type helloworldServer struct {
@@ -53,27 +54,59 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
+	var tlsConfig *tls.Config
+	if *wantsTLS {
+		cert, err := mytls.FSByte(false, "/server.pem")
+		if err != nil {
+			log.Fatalf("failed to load server certificate: %v", err)
+		}
+
+		key, err := mytls.FSByte(false, "/server.key")
+		if err != nil {
+			log.Fatalf("failed to load server private key: %v", err)
+		}
+
+		pair, err := tls.X509KeyPair(cert, key)
+		if err != nil {
+			log.Fatalf("failed to create key pair: %v", err)
+		}
+
+		pool := x509.NewCertPool()
+		ok := pool.AppendCertsFromPEM(cert)
+		if !ok {
+			log.Fatalf("failed to append cert to pool: %v", err)
+		}
+
+		tlsConfig = &tls.Config{
+			Certificates: []tls.Certificate{pair},
+			NextProtos:   []string{"h2"},
+		}
+	}
+
 	m := cmux.New(lis)
 	grpcL := m.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
-	otherL := m.Match(cmux.Any())
+	httpL := m.Match(cmux.Any())
 
 	var opts []grpc.ServerOption
-	if *tls {
-		creds, err := credentials.NewServerTLSFromFile(*certFile, *keyFile)
-		if err != nil {
-			log.Fatalf("Failed to generate credentials %v", err)
-		}
-		opts = []grpc.ServerOption{grpc.Creds(creds)}
+	if tlsConfig != nil {
+		opts = []grpc.ServerOption{grpc.Creds(credentials.NewTLS(tlsConfig))}
 	}
 
 	grpcS := grpc.NewServer(opts...)
 	helloworld.RegisterGreeterServer(grpcS, &helloworldServer{})
 
-	httpS := &http.Server{Handler: http.FileServer(web.FS(false))}
+	httpS := &http.Server{
+		Handler:   http.FileServer(web.FS(false)),
+		TLSConfig: tlsConfig,
+	}
+
+	if tlsConfig != nil {
+		httpL = tls.NewListener(httpL, tlsConfig)
+	}
 
 	// Use the muxed listeners for your servers.
 	go grpcS.Serve(grpcL)
-	go httpS.Serve(otherL)
+	go httpS.Serve(httpL)
 
 	// Start serving!
 	m.Serve()
