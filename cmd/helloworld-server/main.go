@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"flag"
 	"fmt"
 	"log"
@@ -21,6 +20,7 @@ import (
 
 var (
 	wantsTLS = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
+	addr     = flag.String("addr", "", "")
 	port     = flag.Int("port", 8443, "The server port")
 )
 
@@ -56,30 +56,24 @@ func main() {
 
 	var tlsConfig *tls.Config
 	if *wantsTLS {
-		cert, err := mytls.FSByte(false, "/server.pem")
+		var hosts []string
+		if *addr != "" {
+			hosts = append(hosts, *addr)
+		}
+
+		hosts = append(
+			hosts,
+			"localhost", fmt.Sprintf("localhost:%d", port), "127.0.0.1",
+		)
+
+		key, cert, err := mytls.GenerateCertificate(hosts)
 		if err != nil {
-			log.Fatalf("failed to load server certificate: %v", err)
+			log.Fatalf("failed to generate certiticate: %v", err)
 		}
 
-		key, err := mytls.FSByte(false, "/server.key")
+		tlsConfig, err = mytls.NewTLSConfig(key, cert)
 		if err != nil {
-			log.Fatalf("failed to load server private key: %v", err)
-		}
-
-		pair, err := tls.X509KeyPair(cert, key)
-		if err != nil {
-			log.Fatalf("failed to create key pair: %v", err)
-		}
-
-		pool := x509.NewCertPool()
-		ok := pool.AppendCertsFromPEM(cert)
-		if !ok {
-			log.Fatalf("failed to append cert to pool: %v", err)
-		}
-
-		tlsConfig = &tls.Config{
-			Certificates: []tls.Certificate{pair},
-			NextProtos:   []string{"h2"},
+			log.Fatalf("failed to create tls config: %v", err)
 		}
 	}
 
