@@ -14,12 +14,11 @@ import (
 )
 
 var (
-	usesTLS   = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
 	addr      = flag.String("addr", "", "")
 	authority = flag.String("authority", "", "")
 )
 
-func sayHello(client helloworld.GreeterClient, req *helloworld.HelloRequest) {
+func sayHello(client helloworld.GreeterClient, req *helloworld.SayHelloRequest) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	rep, err := client.SayHello(ctx, req)
@@ -29,7 +28,7 @@ func sayHello(client helloworld.GreeterClient, req *helloworld.HelloRequest) {
 	log.Println(rep)
 }
 
-func sayRepetitiveHello(client helloworld.GreeterClient, req *helloworld.HelloRequest) {
+func sayRepetitiveHello(client helloworld.GreeterClient, req *helloworld.SayRepetitiveHelloRequest) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	stream, err := client.SayRepetitiveHello(ctx, req)
@@ -50,18 +49,13 @@ func sayRepetitiveHello(client helloworld.GreeterClient, req *helloworld.HelloRe
 
 func main() {
 	flag.Parse()
-	var opts []grpc.DialOption
-	if *usesTLS {
-		creds := credentials.NewTLS(&tls.Config{
-			InsecureSkipVerify: true,
-		})
-		opts = append(opts, grpc.WithTransportCredentials(creds))
-	} else {
-		opts = append(opts, grpc.WithInsecure())
-	}
 
-	if authority != nil {
-		opts = append(opts, grpc.WithAuthority(*authority))
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(
+			credentials.NewTLS(&tls.Config{
+				InsecureSkipVerify: true,
+			}),
+		),
 	}
 
 	conn, err := grpc.Dial(*addr, opts...)
@@ -71,6 +65,6 @@ func main() {
 	defer conn.Close()
 	client := helloworld.NewGreeterClient(conn)
 
-	sayHello(client, &helloworld.HelloRequest{Name: "Gorka"})
-	sayRepetitiveHello(client, &helloworld.HelloRequest{Name: "Gorka"})
+	sayHello(client, &helloworld.SayHelloRequest{Name: "Gorka"})
+	sayRepetitiveHello(client, &helloworld.SayRepetitiveHelloRequest{Name: "Gorka", Count: 3})
 }

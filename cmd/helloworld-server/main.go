@@ -18,9 +18,7 @@ import (
 )
 
 var (
-	wantsTLS = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
-	addr     = flag.String("addr", "", "")
-	port     = flag.Int("port", 8443, "The server port")
+	port = flag.Int("port", 8443, "The server port")
 )
 
 type helloworldServer struct {
@@ -63,30 +61,21 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	var tlsConfig *tls.Config
-	if *wantsTLS {
-		var hosts []string
-		if *addr != "" {
-			hosts = append(hosts, *addr)
-		}
-
-		hosts = append(
-			hosts,
-			"localhost", fmt.Sprintf("localhost:%d", *port), "127.0.0.1",
-		)
-
-		key, cert, err := mytls.GenerateCertificate(hosts)
-		if err != nil {
-			log.Fatalf("failed to generate certiticate: %v", err)
-		}
-
-		tlsConfig, err = mytls.NewTLSConfig(key, cert)
-		if err != nil {
-			log.Fatalf("failed to create tls config: %v", err)
-		}
-
-		lis = tls.NewListener(lis, tlsConfig)
+	hosts := []string{
+		"localhost", fmt.Sprintf("localhost:%d", *port), "127.0.0.1",
 	}
+
+	key, cert, err := mytls.GenerateCertificate(hosts)
+	if err != nil {
+		log.Fatalf("failed to generate certiticate: %v", err)
+	}
+
+	tlsConfig, err := mytls.NewTLSConfig(key, cert)
+	if err != nil {
+		log.Fatalf("failed to create tls config: %v", err)
+	}
+
+	lis = tls.NewListener(lis, tlsConfig)
 
 	grpcServer := grpc.NewServer()
 	helloworld.RegisterGreeterServer(grpcServer, &helloworldServer{})
