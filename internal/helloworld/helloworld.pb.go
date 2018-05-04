@@ -8,7 +8,8 @@ It is generated from these files:
 	api/helloworld.proto
 
 It has these top-level messages:
-	HelloRequest
+	SayHelloRequest
+	SayRepetitiveHelloRequest
 	HelloReply
 */
 package helloworld
@@ -34,20 +35,45 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 // The request message containing the user's name.
-type HelloRequest struct {
+type SayHelloRequest struct {
 	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
 }
 
-func (m *HelloRequest) Reset()                    { *m = HelloRequest{} }
-func (m *HelloRequest) String() string            { return proto.CompactTextString(m) }
-func (*HelloRequest) ProtoMessage()               {}
-func (*HelloRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *SayHelloRequest) Reset()                    { *m = SayHelloRequest{} }
+func (m *SayHelloRequest) String() string            { return proto.CompactTextString(m) }
+func (*SayHelloRequest) ProtoMessage()               {}
+func (*SayHelloRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-func (m *HelloRequest) GetName() string {
+func (m *SayHelloRequest) GetName() string {
 	if m != nil {
 		return m.Name
 	}
 	return ""
+}
+
+// The request message containing the user's name and the number of times to say hello.
+type SayRepetitiveHelloRequest struct {
+	Name  string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Count int32  `protobuf:"varint,2,opt,name=count" json:"count,omitempty"`
+}
+
+func (m *SayRepetitiveHelloRequest) Reset()                    { *m = SayRepetitiveHelloRequest{} }
+func (m *SayRepetitiveHelloRequest) String() string            { return proto.CompactTextString(m) }
+func (*SayRepetitiveHelloRequest) ProtoMessage()               {}
+func (*SayRepetitiveHelloRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *SayRepetitiveHelloRequest) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *SayRepetitiveHelloRequest) GetCount() int32 {
+	if m != nil {
+		return m.Count
+	}
+	return 0
 }
 
 // The response message containing the greetings
@@ -58,7 +84,7 @@ type HelloReply struct {
 func (m *HelloReply) Reset()                    { *m = HelloReply{} }
 func (m *HelloReply) String() string            { return proto.CompactTextString(m) }
 func (*HelloReply) ProtoMessage()               {}
-func (*HelloReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*HelloReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
 func (m *HelloReply) GetMessage() string {
 	if m != nil {
@@ -68,7 +94,8 @@ func (m *HelloReply) GetMessage() string {
 }
 
 func init() {
-	proto.RegisterType((*HelloRequest)(nil), "helloworld.HelloRequest")
+	proto.RegisterType((*SayHelloRequest)(nil), "helloworld.SayHelloRequest")
+	proto.RegisterType((*SayRepetitiveHelloRequest)(nil), "helloworld.SayRepetitiveHelloRequest")
 	proto.RegisterType((*HelloReply)(nil), "helloworld.HelloReply")
 }
 
@@ -84,9 +111,9 @@ const _ = grpc.SupportPackageIsVersion4
 
 type GreeterClient interface {
 	// Sends a greeting
-	SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error)
+	SayHello(ctx context.Context, in *SayHelloRequest, opts ...grpc.CallOption) (*HelloReply, error)
 	// Send repetitive greetings
-	SayRepetitiveHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (Greeter_SayRepetitiveHelloClient, error)
+	SayRepetitiveHello(ctx context.Context, in *SayRepetitiveHelloRequest, opts ...grpc.CallOption) (Greeter_SayRepetitiveHelloClient, error)
 }
 
 type greeterClient struct {
@@ -97,7 +124,7 @@ func NewGreeterClient(cc *grpc.ClientConn) GreeterClient {
 	return &greeterClient{cc}
 }
 
-func (c *greeterClient) SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error) {
+func (c *greeterClient) SayHello(ctx context.Context, in *SayHelloRequest, opts ...grpc.CallOption) (*HelloReply, error) {
 	out := new(HelloReply)
 	err := grpc.Invoke(ctx, "/helloworld.Greeter/SayHello", in, out, c.cc, opts...)
 	if err != nil {
@@ -106,7 +133,7 @@ func (c *greeterClient) SayHello(ctx context.Context, in *HelloRequest, opts ...
 	return out, nil
 }
 
-func (c *greeterClient) SayRepetitiveHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (Greeter_SayRepetitiveHelloClient, error) {
+func (c *greeterClient) SayRepetitiveHello(ctx context.Context, in *SayRepetitiveHelloRequest, opts ...grpc.CallOption) (Greeter_SayRepetitiveHelloClient, error) {
 	stream, err := grpc.NewClientStream(ctx, &_Greeter_serviceDesc.Streams[0], c.cc, "/helloworld.Greeter/SayRepetitiveHello", opts...)
 	if err != nil {
 		return nil, err
@@ -142,9 +169,9 @@ func (x *greeterSayRepetitiveHelloClient) Recv() (*HelloReply, error) {
 
 type GreeterServer interface {
 	// Sends a greeting
-	SayHello(context.Context, *HelloRequest) (*HelloReply, error)
+	SayHello(context.Context, *SayHelloRequest) (*HelloReply, error)
 	// Send repetitive greetings
-	SayRepetitiveHello(*HelloRequest, Greeter_SayRepetitiveHelloServer) error
+	SayRepetitiveHello(*SayRepetitiveHelloRequest, Greeter_SayRepetitiveHelloServer) error
 }
 
 func RegisterGreeterServer(s *grpc.Server, srv GreeterServer) {
@@ -152,7 +179,7 @@ func RegisterGreeterServer(s *grpc.Server, srv GreeterServer) {
 }
 
 func _Greeter_SayHello_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HelloRequest)
+	in := new(SayHelloRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -164,13 +191,13 @@ func _Greeter_SayHello_Handler(srv interface{}, ctx context.Context, dec func(in
 		FullMethod: "/helloworld.Greeter/SayHello",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GreeterServer).SayHello(ctx, req.(*HelloRequest))
+		return srv.(GreeterServer).SayHello(ctx, req.(*SayHelloRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Greeter_SayRepetitiveHello_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(HelloRequest)
+	m := new(SayRepetitiveHelloRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
@@ -212,18 +239,20 @@ var _Greeter_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("api/helloworld.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 205 bytes of a gzipped FileDescriptorProto
+	// 238 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0x12, 0x49, 0x2c, 0xc8, 0xd4,
 	0xcf, 0x48, 0xcd, 0xc9, 0xc9, 0x2f, 0xcf, 0x2f, 0xca, 0x49, 0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9,
-	0x17, 0xe2, 0x42, 0x88, 0x28, 0x29, 0x71, 0xf1, 0x78, 0x80, 0x78, 0x41, 0xa9, 0x85, 0xa5, 0xa9,
-	0xc5, 0x25, 0x42, 0x42, 0x5c, 0x2c, 0x79, 0x89, 0xb9, 0xa9, 0x12, 0x8c, 0x0a, 0x8c, 0x1a, 0x9c,
-	0x41, 0x60, 0xb6, 0x92, 0x1a, 0x17, 0x17, 0x54, 0x4d, 0x41, 0x4e, 0xa5, 0x90, 0x04, 0x17, 0x7b,
-	0x6e, 0x6a, 0x71, 0x71, 0x62, 0x3a, 0x4c, 0x11, 0x8c, 0x6b, 0x34, 0x95, 0x91, 0x8b, 0xdd, 0xbd,
-	0x28, 0x35, 0xb5, 0x24, 0xb5, 0x48, 0xc8, 0x8e, 0x8b, 0x23, 0x38, 0xb1, 0x12, 0xac, 0x4d, 0x48,
-	0x42, 0x0f, 0xc9, 0x09, 0xc8, 0xb6, 0x49, 0x89, 0x61, 0x91, 0x29, 0xc8, 0xa9, 0x54, 0x62, 0x10,
-	0xf2, 0xe2, 0x12, 0x0a, 0x4e, 0xac, 0x0c, 0x4a, 0x2d, 0x48, 0x2d, 0xc9, 0x2c, 0xc9, 0x2c, 0x4b,
-	0x25, 0xdb, 0x24, 0x03, 0x46, 0x27, 0x63, 0x2e, 0xe9, 0xcc, 0x7c, 0xbd, 0xf4, 0xa2, 0x82, 0x64,
-	0xbd, 0xd4, 0x8a, 0xc4, 0xdc, 0x82, 0x9c, 0xd4, 0x62, 0x24, 0xd5, 0x4e, 0xfc, 0x60, 0xe5, 0xe1,
-	0x20, 0x76, 0x00, 0x28, 0x7c, 0x02, 0x18, 0x1b, 0x18, 0x19, 0x93, 0xd8, 0xc0, 0x61, 0x65, 0x0c,
-	0x08, 0x00, 0x00, 0xff, 0xff, 0x7b, 0xf1, 0xb5, 0xa3, 0x43, 0x01, 0x00, 0x00,
+	0x17, 0xe2, 0x42, 0x88, 0x28, 0xa9, 0x72, 0xf1, 0x07, 0x27, 0x56, 0x7a, 0x80, 0x04, 0x82, 0x52,
+	0x0b, 0x4b, 0x53, 0x8b, 0x4b, 0x84, 0x84, 0xb8, 0x58, 0xf2, 0x12, 0x73, 0x53, 0x25, 0x18, 0x15,
+	0x18, 0x35, 0x38, 0x83, 0xc0, 0x6c, 0x25, 0x57, 0x2e, 0xc9, 0xe0, 0xc4, 0xca, 0xa0, 0xd4, 0x82,
+	0xd4, 0x92, 0xcc, 0x92, 0xcc, 0xb2, 0x54, 0x42, 0x1a, 0x84, 0x44, 0xb8, 0x58, 0x93, 0xf3, 0x4b,
+	0xf3, 0x4a, 0x24, 0x98, 0x14, 0x18, 0x35, 0x58, 0x83, 0x20, 0x1c, 0x25, 0x35, 0x2e, 0x2e, 0xa8,
+	0xce, 0x82, 0x9c, 0x4a, 0x21, 0x09, 0x2e, 0xf6, 0xdc, 0xd4, 0xe2, 0xe2, 0xc4, 0x74, 0x98, 0x56,
+	0x18, 0xd7, 0x68, 0x29, 0x23, 0x17, 0xbb, 0x7b, 0x51, 0x6a, 0x6a, 0x49, 0x6a, 0x91, 0x90, 0x23,
+	0x17, 0x07, 0xcc, 0x85, 0x42, 0xd2, 0x7a, 0x48, 0x9e, 0x41, 0x73, 0xb7, 0x94, 0x18, 0xb2, 0x24,
+	0xc2, 0x1a, 0x25, 0x06, 0xa1, 0x70, 0x2e, 0x21, 0x4c, 0xd7, 0x0b, 0xa9, 0xa2, 0x19, 0x86, 0xdd,
+	0x77, 0xb8, 0x8d, 0x35, 0x60, 0x74, 0x32, 0xe6, 0x92, 0xce, 0xcc, 0xd7, 0x4b, 0x2f, 0x2a, 0x48,
+	0xd6, 0x4b, 0xad, 0x48, 0xcc, 0x2d, 0xc8, 0x49, 0x2d, 0x46, 0x52, 0xed, 0xc4, 0x0f, 0x56, 0x1e,
+	0x0e, 0x62, 0x07, 0x80, 0x42, 0x3e, 0x80, 0xb1, 0x81, 0x91, 0x31, 0x89, 0x0d, 0x1c, 0x0b, 0xc6,
+	0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x2c, 0x2f, 0x52, 0x7e, 0x9d, 0x01, 0x00, 0x00,
 }

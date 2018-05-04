@@ -30,12 +30,12 @@ func reply(name string) *helloworld.HelloReply {
 	return &helloworld.HelloReply{Message: fmt.Sprintf("Hello %s!!!", name)}
 }
 
-func (hws *helloworldServer) SayHello(ctx context.Context, req *helloworld.HelloRequest) (*helloworld.HelloReply, error) {
+func (hws *helloworldServer) SayHello(ctx context.Context, req *helloworld.SayHelloRequest) (*helloworld.HelloReply, error) {
 	return reply(req.Name), nil
 }
 
-func (hws *helloworldServer) SayRepetitiveHello(req *helloworld.HelloRequest, stream helloworld.Greeter_SayRepetitiveHelloServer) error {
-	for i := 0; i < 10; i++ {
+func (hws *helloworldServer) SayRepetitiveHello(req *helloworld.SayRepetitiveHelloRequest, stream helloworld.Greeter_SayRepetitiveHelloServer) error {
+	for i := 0; i < int(req.Count); i++ {
 		name := fmt.Sprintf("%s-%d", req.Name, i)
 		if err := stream.Send(reply(name)); err != nil {
 			return err

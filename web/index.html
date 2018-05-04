@@ -29,7 +29,7 @@
 
         var sayHello = function(name) {
             addLeftMessage(name);
-            var unaryRequest = new proto.helloworld.HelloRequest();
+            var unaryRequest = new proto.helloworld.SayHelloRequest();
             unaryRequest.setName(name);
             helloService.sayHello(unaryRequest, {
                     "custom-header-1": "value1"
@@ -50,8 +50,9 @@
             addLeftMessage(name);
             if (count > MAX_STREAM_MESSAGES)
                 count = MAX_STREAM_MESSAGES;
-            var streamRequest = new proto.helloworld.HelloRequest();
+            var streamRequest = new proto.helloworld.SayRepetitiveHelloRequest();
             streamRequest.setName(name);
+            streamRequest.setCount(count)
 
             var stream = helloService.sayRepetitiveHello(streamRequest, {
                 "custom-header-1": "value1"
@@ -81,7 +82,7 @@
             if (name.indexOf(' ') > 0) {
                 var count = name.substr(0, name.indexOf(' '));
                 if (/^\d+$/.test(count)) {
-                    sayRepetitiveHello(name.substr(name.indexOf(' ') + 1));
+                    sayRepetitiveHello(name.substr(name.indexOf(' ') + 1), count);
                 } else {
                     sayHello(name);
                 }

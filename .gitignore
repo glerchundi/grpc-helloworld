@@ -11,6 +11,10 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# VSCode
+debug
+launch.json
+
 # Project files
 internal/tls/server.key
 internal/tls/server.pem
