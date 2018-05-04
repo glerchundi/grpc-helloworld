@@ -8,14 +8,13 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/glerchundi/grpc-helloworld/internal/helloworld"
 	mytls "github.com/glerchundi/grpc-helloworld/internal/tls"
 	"github.com/glerchundi/grpc-helloworld/internal/web"
-	"github.com/soheilhy/cmux"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -46,6 +45,16 @@ func (hws *helloworldServer) SayRepetitiveHello(req *helloworld.HelloRequest, st
 	return nil
 }
 
+func grpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+			grpcServer.ServeHTTP(w, r)
+		} else {
+			otherHandler.ServeHTTP(w, r)
+		}
+	})
+}
+
 func main() {
 	flag.Parse()
 
@@ -63,7 +72,7 @@ func main() {
 
 		hosts = append(
 			hosts,
-			"localhost", fmt.Sprintf("localhost:%d", port), "127.0.0.1",
+			"localhost", fmt.Sprintf("localhost:%d", *port), "127.0.0.1",
 		)
 
 		key, cert, err := mytls.GenerateCertificate(hosts)
@@ -75,33 +84,19 @@ func main() {
 		if err != nil {
 			log.Fatalf("failed to create tls config: %v", err)
 		}
+
+		lis = tls.NewListener(lis, tlsConfig)
 	}
 
-	m := cmux.New(lis)
-	grpcL := m.Match(cmux.HTTP2HeaderField("content-type", "application/grpc"))
-	httpL := m.Match(cmux.Any())
+	grpcServer := grpc.NewServer()
+	helloworld.RegisterGreeterServer(grpcServer, &helloworldServer{})
 
-	var opts []grpc.ServerOption
-	if tlsConfig != nil {
-		opts = []grpc.ServerOption{grpc.Creds(credentials.NewTLS(tlsConfig))}
+	server := &http.Server{
+		Handler: grpcHandlerFunc(grpcServer, http.FileServer(web.FS(false))),
 	}
-
-	grpcS := grpc.NewServer(opts...)
-	helloworld.RegisterGreeterServer(grpcS, &helloworldServer{})
-
-	httpS := &http.Server{
-		Handler:   http.FileServer(web.FS(false)),
-		TLSConfig: tlsConfig,
-	}
-
-	if tlsConfig != nil {
-		httpL = tls.NewListener(httpL, tlsConfig)
-	}
-
-	// Use the muxed listeners for your servers.
-	go grpcS.Serve(grpcL)
-	go httpS.Serve(httpL)
 
 	// Start serving!
-	m.Serve()
+	if err := server.Serve(lis); err != nil {
+		log.Fatalf("%v", err)
+	}
 }
